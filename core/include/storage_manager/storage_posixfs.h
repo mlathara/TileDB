@@ -1,11 +1,9 @@
 /**
- * @file   tiledb_array_consolidate.cc
+ * @file local_fs.h
  *
  * @section LICENSE
  *
  * The MIT License
- * 
- * @copyright Copyright (c) 2016 MIT and Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,31 +25,43 @@
  * 
  * @section DESCRIPTION
  *
- * It shows how to consolidate arrays.
+ * LocalFS derived from StorageFS for Posix Filesystem
+ *
  */
 
-#include "tiledb.h"
+#ifndef __STORAGE_POSIXFS_H__
+#define  __STORAGE_POSIXFS_H__
 
-int main(int argc, char *argv[]) {
-  // Initialize context with home dir if specified in command line, else
-  // initialize with the default configuration parameters
-  TileDB_CTX* tiledb_ctx;
-  if (argc > 1) {
-    TileDB_Config tiledb_config;
-    tiledb_config.home_ = argv[1];
-    tiledb_ctx_init(&tiledb_ctx, &tiledb_config);
-  } else {
-    tiledb_ctx_init(&tiledb_ctx, NULL);
-  }
+#include "storage_fs.h"
 
-  // Consolidate the dense array
-  tiledb_array_consolidate(tiledb_ctx, "my_workspace/dense_arrays/my_array_A");
+class PosixFS : public StorageFS {
+ public:
+  std::string current_dir();
 
-  // Consolidate the sparse array
-  tiledb_array_consolidate(tiledb_ctx, "my_workspace/sparse_arrays/my_array_B");
+  bool is_dir(const std::string& dir);
+  bool is_file(const std::string& file);
+  std::string real_dir(const std::string& dir);
+               
+  int create_dir(const std::string& dir);
+  int delete_dir(const std::string& dir);
 
-  // Finalize context
-  tiledb_ctx_finalize(tiledb_ctx);
+  std::vector<std::string> get_dirs(const std::string& dir);
+  std::vector<std::string> get_files(const std::string& dir);
 
-  return 0;
-}
+  int create_file(const std::string& filename, int flags, mode_t mode);
+  int delete_file(const std::string& filename);
+
+  size_t file_size(const std::string& filename);
+
+  int read_from_file(const std::string& filename, off_t offset, void *buffer, size_t length);
+  int write_to_file(const std::string& filename, const void *buffer, size_t buffer_size);
+  
+  int move_path(const std::string& old_path, const std::string& new_path);
+    
+  int sync_path(const std::string& path);
+
+  bool consolidation_support();
+};
+
+#endif /* __STORAGE_POSIXFS_H__ */
+

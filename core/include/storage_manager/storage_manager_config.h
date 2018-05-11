@@ -38,8 +38,10 @@
 #endif
 #include <string>
 
-
-
+#include "storage_fs.h"
+#include "storage_posixfs.h"
+//#include "storage_hdfs.h"
+#include "storage_gcs.h"
 
 /** 
  * This class is responsible for the TileDB storage manager configuration 
@@ -136,6 +138,9 @@ class StorageManagerConfig {
   /** Returns the write method. */
   int write_method() const;
 
+  /** Returns the supporting filesystem */
+  StorageFS* get_filesystem() const;
+  
  private:
   /* ********************************* */
   /*        PRIVATE ATTRIBUTES         */
@@ -167,6 +172,9 @@ class StorageManagerConfig {
    *      TileDB will use MPI-IO write. 
    */
   int write_method_;
+
+  /** The Filesystem type associated with this configuration */
+  StorageFS *fs_ = NULL;
 };
 
 #endif

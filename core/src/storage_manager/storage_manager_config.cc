@@ -34,9 +34,11 @@
 
 #include "storage_manager_config.h"
 #include "tiledb_constants.h"
+#include "utils.h"
 
-
-
+#include <assert.h>
+#include <iostream>
+#include <string.h>
 
 /* ****************************** */
 /*   CONSTRUCTORS & DESTRUCTORS   */
@@ -44,6 +46,7 @@
 
 StorageManagerConfig::StorageManagerConfig() {
   // Default values
+  fs_ = new PosixFS();
   home_ = "";
   read_method_ = TILEDB_IO_MMAP;
   write_method_ = TILEDB_IO_WRITE;
@@ -53,10 +56,10 @@ StorageManagerConfig::StorageManagerConfig() {
 }
 
 StorageManagerConfig::~StorageManagerConfig() {
+  if (fs_ != NULL) {
+    delete fs_;
+  }
 }
-
-
-
 
 /* ****************************** */
 /*             MUTATORS           */
@@ -70,10 +73,32 @@ void StorageManagerConfig::init(
     int read_method,
     int write_method) {
   // Initialize home
-  if(home == NULL)
-    home_ = "";
-  else
-    home_ = home;
+  if (strstr(home, "://")) {
+     if (fs_ != NULL)
+       delete fs_;
+     home_ = std::string(home, strlen(home));
+     /*if (is_hdfs_path(home)) {
+       fs_ = new HDFS(home_);
+     } else */
+     if (is_gcs_path(home)) {
+       fs_ = new GCS(home_);
+     } else {
+       std::cerr << "No TileDB support for URL=" << home_ << std::endl << std::flush;
+       assert(false && "No TileDB support for this URL");
+     }
+     read_method_ = TILEDB_IO_READ;
+     write_method_ = TILEDB_IO_WRITE;
+     return;
+   }
+
+   if (fs_ == NULL)
+     fs_ = new PosixFS();
+
+   if(home == NULL) {
+     home_ = "";
+   } else {
+     home_ = std::string(home, strlen(home));
+   } 
 
 #ifdef HAVE_MPI
   // Initialize MPI communicator
@@ -93,8 +118,6 @@ void StorageManagerConfig::init(
      write_method_ != TILEDB_IO_MPI)
     write_method_ = TILEDB_IO_WRITE;  // Use default 
 }
-
-
 
 
 /* ****************************** */
@@ -117,4 +140,8 @@ int StorageManagerConfig::read_method() const {
 
 int StorageManagerConfig::write_method() const {
   return write_method_;
+}
+
+StorageFS* StorageManagerConfig::get_filesystem() const {
+  return fs_;
 }
